@@ -1,0 +1,75 @@
+# 중계 영상 → 포지션별 전술 피드백 (캡스톤1 · 1팀 GSR)
+
+중계 영상에서 뽑은 선수 좌표로 **팀별 자리 10개**를 찾고, 입력한 **포메이션에 짝지어 포지션 이름**을 붙인 뒤, **공격/수비 상황별 포지션 피드백**을 주는 코드.
+
+```
+사진(img1/*.jpg) → [SoccernetGSR] → 선수 박스·추적 ID
+  → [pipeline] 경기장 좌표 변환 → 팀 나누기 → 자리 10개 → 프레임별 팀 이동/짝짓기 (viewer json)
+  → [analysis] 포지션 이름 → 공격/수비 통계 → 피드백 HTML
+```
+
+> ⚠️ **이 저장소는 public. 코드만 올린다.**
+> - SoccerNet NDA(연구·비상업, 재배포 금지): 사진·영상·보정 파일·결과 좌표(json/csv/npy)·결과 영상은 **절대 커밋 금지**. 각자 NDA 신청 후 직접 받기.
+> - 토큰·비밀번호를 코드에 쓰지 말 것. HF 토큰은 `hf auth login` 프롬프트로만 입력.
+> - `git add -f` 금지. 한 번 올라간 파일은 지워도 기록에 남는다. 커밋 전 `git status`로 확인.
+
+## 데이터 받기
+- Hugging Face `SoccerNet/SoccerNet_raw_HQ`, 브랜치 **`frames-720p-2fps`** (1초 2장 사진)
+- 예시 경기: `england_epl/2016-2017/2016-09-24 - 14-30 Manchester United 4 - 1 Leicester`, 전반 → 사진 5,400장, 약 700 MB
+- 카메라 보정: 같은 경기 폴더의 `1_field_calib_ccbv.json`
+- GSR 코드: [yinmayoo185/SoccernetGSR](https://github.com/yinmayoo185/SoccernetGSR) (사진 폴더 `<set>/<seq>/img1/*.jpg` 입력)
+
+## 폴더
+| 폴더 | 파일 | 하는 일 |
+|---|---|---|
+| `pipeline/` | `run_manutd.sh` | 사진 받기 → 압축 풀기 → GSR 폴더 형식 연결 → GSR 추론 |
+| | `genoa_formation.py` | 보정 파일로 화면 좌표 → 경기장 좌표(m) (`load_calib`, `get_H`) |
+| | `team_hist.py` | 유니폼 색 히스토그램 + 2-means로 두 팀 나누기 → `*_teams.json` |
+| | `role_assign.py` | **Bialkowski 2014** 방식 자리 10개 (팀 이동 빼기 + 헝가리안 반복) |
+| | `compare_gt_pred.py` | GSR 정답 클립으로 자리 위치 검증 (맨유 평균 2.5 m) |
+| | `manutd_formation.py` | 팀별 자리 그림 |
+| | `manutd_v2.py` | 프레임별 팀 이동·짝짓기 → `manutd_viewer.json` + 중계 오버레이 영상 |
+| `analysis/` | `build.py` | 자리 10개 ↔ 포메이션 템플릿 헝가리안 짝짓기(축별 z-score) → 포지션 이름, 라인 높이 → `stats.json` |
+| | `phase.py` | 공격/수비 나누기(팀 중심 x > +5 m 공격, < −5 m 수비) → 상황별 위치·간격 |
+| | `check_lineup.py`, `rule_test.py` | 실제 라인업과 포지션 이름 비교, 이름 규칙 비교 |
+| | `make_tool.py` | `stats.json`을 템플릿에 넣어 피드백 HTML 생성 |
+| `web/` | `template.html` | 포메이션 입력 → 자동 매핑 → 포지션 피드백 → 코칭 보드 |
+
+## 실행 순서 (deep07 컨테이너, `(gsr)` 환경)
+```bash
+# 1) 데이터 + GSR 추론 (경로는 스크립트 맨 위 변수 수정)
+bash pipeline/run_manutd.sh
+# 2) 팀 나누기
+python pipeline/team_hist.py <GSR 결과 txt> "<사진 경로>/%08d.jpg" manutd_teams.json
+# 3) 자리 10개 + 프레임별 짝짓기 (START, N = 오버레이 영상 구간)
+python pipeline/manutd_v2.py 1200 600
+# 4) 포지션 이름 + 공격/수비 통계
+python analysis/build.py manutd_viewer.json stats.json
+python analysis/phase.py manutd_viewer.json stats.json
+# 5) 피드백 HTML
+python analysis/make_tool.py stats.json web/template.html formation_tool.html
+```
+- 포메이션은 `analysis/build.py`의 `FORM`에서 팀별로 입력 (예: 맨유 4-2-3-1, 레스터 4-4-2).
+- 다른 경기: 사진·보정 파일 경로와 `FORM`만 바꾸면 됨.
+
+## 피드백 기준 (현재 규칙 기반, 추후 경기 데이터로 기준 학습 예정)
+| 포지션 | 상황 | 기준 |
+|---|---|---|
+| 풀백 | 수비 | 센터백 라인보다 5 m 넘게 앞 |
+| 풀백 | 공격 | 미드 라인보다 6 m 넘게 뒤 |
+| 센터백 | 공통 / 공격 | 두 센터백 간격 16 m 초과 / 중앙 미드와 9 m 초과 |
+| 수비·중앙 미드 | 수비 / 공격 | 센터백과 8 m 초과 / 가장 가까운 공격수와 15 m 초과 |
+| 윙·측면 미드 | 공격 / 수비 | 중앙에서 12 m 미만(좁음) / 미드 라인보다 6 m 넘게 앞 |
+| 공격형 미드 | 공통 | 스트라이커와 12 m 초과 |
+| 스트라이커 | 공통 | 가장 가까운 동료와 11 m 초과(고립) |
+
+## 아직 안 된 것
+- 화면 밖 선수 추정 (자리 평균 + 팀 이동으로 가능, 미구현)
+- 공 위치 기반 공격/수비 판단
+- 기준값 데이터 학습 (~100경기)
+
+## 참고 논문
+- SoccerNet-GSR: https://arxiv.org/abs/2404.11335
+- Bialkowski et al. 2014, Large-Scale Analysis of Soccer Matches using Spatiotemporal Tracking Data (ICDM)
+- Shaw & Glickman 2019, Dynamic analysis of team strategy in professional football
+- Off-Screen Imputation: https://arxiv.org/abs/2607.11548

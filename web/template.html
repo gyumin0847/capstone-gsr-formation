@@ -1,0 +1,589 @@
+<title>포메이션 입력형 전술 피드백</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: a three-step tool. Inputs on top, the pitch board beside the slot list, then position cards in three lines (DF / MF / FW). */
+:root{
+  --bg:#eceee9; --surface:#fafbf8; --ink:#17201a; --muted:#57625b; --line:#d2d8d2;
+  --utd:#c4282a; --lei:#2a5cc0; --dev:#f3c531; --warn:#b4621a; --good:#2f7a52; --info:#57625b;
+  --pitch:#2b5a3b; --pitch-2:#2f6240; --chalk:rgba(255,255,255,.78);
+  --gD:#5ec8ff; --gM:#ffd23f; --gF:#ff7a6b;
+  --f-display:"Black Han Sans","Noto Sans KR",system-ui,sans-serif;
+  --f-body:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-num:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1411; --surface:#161e19; --ink:#e6ece7; --muted:#97a59c; --line:#29342d;
+    --utd:#ec4a42; --lei:#5c8ef2; --dev:#f5cf4a; --warn:#e79a52; --good:#7cc19a; --info:#97a59c;
+    --pitch:#21472e; --pitch-2:#244d32; --chalk:rgba(255,255,255,.7);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1411; --surface:#161e19; --ink:#e6ece7; --muted:#97a59c; --line:#29342d;
+  --utd:#ec4a42; --lei:#5c8ef2; --dev:#f5cf4a; --warn:#e79a52; --good:#7cc19a; --info:#97a59c;
+  --pitch:#21472e; --pitch-2:#244d32; --chalk:rgba(255,255,255,.7);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--f-body); line-height:1.6;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:24px 56px;
+}
+.wrap{max-width:1140px; margin:0 auto; display:flex; flex-direction:column; gap:30px}
+.eyebrow{font-family:var(--f-num); font-weight:600; font-size:.95rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0}
+h1{font-family:var(--f-display); font-weight:400; font-size:clamp(1.8rem, 3.8vw, 2.7rem); line-height:1.12; margin:6px 0 0; text-wrap:balance}
+.lede{margin:10px 0 0; max-width:66ch; color:var(--muted); font-size:1.02rem}
+.flow{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; list-style:none; margin:16px 0 0; padding:0}
+@media (max-width:700px){.flow{grid-template-columns:minmax(0,1fr)}}
+.flow li{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:2px}
+.flow b{font-family:var(--f-num); font-size:1rem; color:var(--muted)}
+.flow span{font-weight:700}
+.flow small{color:var(--muted); font-size:.82rem; line-height:1.45}
+
+section{display:flex; flex-direction:column; gap:14px}
+.sh{display:flex; flex-direction:column; gap:4px; max-width:70ch}
+.num{font-family:var(--f-num); font-weight:700; font-size:1rem; color:var(--muted); letter-spacing:.06em}
+h2{font-family:var(--f-display); font-weight:400; font-size:1.55rem; line-height:1.2; margin:0; text-wrap:balance}
+.sh p{margin:0; color:var(--muted)}
+
+.inputs{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 18px; display:flex; flex-wrap:wrap; gap:16px 28px; align-items:flex-end}
+.field{display:flex; flex-direction:column; gap:6px}
+.field label, .field .lbl{font-size:.8rem; color:var(--muted); font-weight:700}
+.seg{display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; background:var(--bg)}
+.seg button{font:inherit; border:0; background:transparent; padding:7px 16px; font-weight:700; color:var(--muted); cursor:pointer; display:flex; align-items:center; gap:7px}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+select{font:inherit; font-weight:700; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:7px 12px}
+button:focus-visible, select:focus-visible{outline:2px solid var(--dev); outline-offset:2px}
+.sw{width:10px; height:10px; border-radius:50%; display:inline-block; flex:none}
+.sw.utd{background:var(--utd)} .sw.lei{background:var(--lei)}
+.hint{font-size:.82rem; color:var(--muted); max-width:44ch}
+.hint b{color:var(--ink)}
+
+.map{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:20px; align-items:start}
+@media (max-width:900px){.map{grid-template-columns:minmax(0,1fr)}}
+.fig{display:flex; flex-direction:column; gap:8px; min-width:0}
+.board{border-radius:10px; overflow:hidden; background:var(--pitch); max-width:100%}
+.board canvas{display:block; width:100%; height:auto}
+.cap{font-size:.8rem; color:var(--muted)}
+.phase{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.tbl{background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow-x:auto}
+table{width:100%; border-collapse:collapse; font-size:.86rem; font-variant-numeric:tabular-nums}
+th, td{padding:6px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap}
+thead th{font-size:.76rem; color:var(--muted); font-weight:700}
+tbody tr:last-child td{border-bottom:0}
+td select{padding:4px 8px; font-size:.84rem}
+td .loc{font-family:var(--f-num); font-size:.95rem; color:var(--muted)}
+.dot{width:12px; height:12px; border-radius:50%; display:inline-block; vertical-align:middle; border:2px solid rgba(0,0,0,.25)}
+.maphead{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
+.maphead .st{font-size:.82rem; font-weight:700}
+.maphead .st.edited{color:var(--warn)} .maphead .st.auto{color:var(--good)}
+.reset{font:inherit; font-size:.82rem; border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:8px; padding:4px 10px; cursor:pointer}
+
+.lines{display:flex; flex-direction:column; gap:18px}
+.lineg h3{margin:0 0 8px; font-size:.95rem; display:flex; align-items:center; gap:8px}
+.lineg h3 i{width:14px; height:4px; border-radius:2px; display:inline-block}
+.cards{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px}
+.pc{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; cursor:pointer; text-align:left; font:inherit; color:inherit}
+.pc[aria-pressed="true"]{border-color:var(--ink); box-shadow:0 0 0 1px var(--ink)}
+.pc .ph{display:flex; align-items:baseline; gap:8px}
+.pc .ph b{font-size:1rem}
+.pc .ph em{font-style:normal; font-family:var(--f-num); color:var(--muted); font-weight:600}
+.pc .obs{font-size:.74rem; color:var(--muted); margin-top:-6px}
+.pc .obs.low{color:var(--warn); font-weight:700}
+.fbrow{display:grid; grid-template-columns:52px minmax(0,1fr); gap:8px; font-size:.86rem; line-height:1.5}
+.fbrow .tg{font-size:.72rem; font-weight:700; padding-top:2px}
+.fbrow.good .tg{color:var(--good)} .fbrow.fix .tg{color:var(--warn)} .fbrow.info .tg{color:var(--info)}
+.fbrow p{margin:0}
+.fbrow .n{font-family:var(--f-num); font-weight:700; font-size:1rem}
+.fbrow .do{display:block; color:var(--muted)}
+.fbrow.fix .do{color:var(--ink)}
+
+.team{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start}
+@media (max-width:760px){.team{grid-template-columns:minmax(0,1fr)}}
+.sum{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:8px}
+.sum p{margin:0; font-size:.92rem}
+.sum b{display:block; font-size:.76rem; color:var(--muted)}
+.notes{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px 18px}
+.notes h2{font-size:1.2rem; margin-bottom:6px}
+.notes ul{margin:0; padding-left:1.1em; color:var(--muted); display:flex; flex-direction:column; gap:4px; font-size:.9rem}
+footer{font-size:.78rem; color:var(--muted)}
+.coach{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:20px; align-items:start; scroll-margin-top:16px}
+@media (max-width:900px){.coach{grid-template-columns:minmax(0,1fr)}}
+.mvh{margin:0; font-size:1rem}
+.moves{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+.moves li button{width:100%; text-align:left; font:inherit; color:inherit; cursor:pointer; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; display:grid; grid-template-columns:28px minmax(0,1fr); gap:10px; align-items:start}
+.moves li button[aria-pressed="true"]{border-color:var(--ink); box-shadow:0 0 0 1px var(--ink)}
+.moves .no{width:24px; height:24px; border-radius:50%; background:var(--dev); color:#1a1a1a; display:grid; place-items:center; font-family:var(--f-num); font-weight:700}
+.moves b{display:block}
+.moves .mv{font-family:var(--f-num); font-weight:700; font-size:1.15rem}
+.moves small{display:block; color:var(--muted); font-size:.82rem; line-height:1.45}
+.moves .none{color:var(--muted); font-size:.9rem; padding:8px 2px}
+.kpis{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px}
+.kpi{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:8px 10px; display:flex; flex-direction:column}
+.kpi .k{font-size:.74rem; color:var(--muted)}
+.kpi .v{font-family:var(--f-num); font-weight:700; font-size:1.25rem; font-variant-numeric:tabular-nums; white-space:nowrap}
+.kpi .v small{font-weight:500; color:var(--muted); font-size:.9rem}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">SoccerNet · EPL 2016-17 · 맨유 4–1 레스터 · 전반 45분 · 중계 영상</p>
+    <h1>포메이션만 알려주면, 포지션별 피드백이 나온다</h1>
+    <p class="lede">중계 영상에서 선수 좌표를 모으면 점이 10군데에 뭉쳐요. 팀이 쓴 포메이션을 입력하면 그 10곳에 풀백, 센터백, 스트라이커 같은 포지션을 붙이고, 포지션마다 공격할 때와 수비할 때 피드백을 만들어요.</p>
+    <ol class="flow">
+      <li><b>1</b><span>포메이션 입력</span><small>팀이 쓴 포메이션 하나만 고르면 돼요</small></li>
+      <li><b>2</b><span>좌표로 자동 짝짓기</span><small>좌표가 뭉친 10곳을 포지션에 맞춰요. 틀리면 고칠 수 있어요</small></li>
+      <li><b>3</b><span>포지션별 피드백</span><small>공격할 때와 수비할 때 각 포지션이 어땠는지 알려줘요</small></li>
+    </ol>
+  </header>
+
+  <section aria-labelledby="s1">
+    <div class="sh"><span class="num">1 · 입력</span><h2 id="s1">팀과 포메이션을 고르세요</h2></div>
+    <div class="inputs">
+      <div class="field"><span class="lbl">팀</span>
+        <div class="seg" role="group" aria-label="팀 선택">
+          <button data-team="0" aria-pressed="true"><i class="sw utd"></i>맨유</button>
+          <button data-team="1" aria-pressed="false"><i class="sw lei"></i>레스터</button>
+        </div>
+      </div>
+      <div class="field"><label for="form">포메이션</label><select id="form"></select></div>
+      <p class="hint" id="hint">–</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="s2">
+    <div class="sh"><span class="num">2 · 자동 짝짓기</span><h2 id="s2">좌표가 뭉친 10곳에 포지션을 붙였어요</h2>
+      <p>점 색은 수비(파랑)·미드(노랑)·공격(빨강) 줄이에요. 빈 마름모는 입력한 포메이션의 표준 위치이고, 점선이 어느 자리와 짝지어졌는지 보여줘요. 오른쪽 표에서 포지션을 바꾸면 피드백도 바로 다시 계산돼요.</p>
+    </div>
+    <div class="map">
+      <div class="fig">
+        <div class="phase">
+          <span class="cap">자리 위치 보기</span>
+          <div class="seg" role="group" aria-label="상황 선택">
+            <button data-ph="all" aria-pressed="true">45분 전체</button>
+            <button data-ph="att" aria-pressed="false">공격할 때</button>
+            <button data-ph="def" aria-pressed="false">수비할 때</button>
+          </div>
+        </div>
+        <div class="board"><canvas id="cv" width="1110" height="780" aria-label="자리별 좌표 분포와 포메이션 짝짓기"></canvas></div>
+        <span class="cap">팀 이동을 뺀 상대 위치예요. 오른쪽(→)이 공격 방향, 위가 왼쪽이에요. 축 단위는 m.</span>
+      </div>
+      <div class="fig">
+        <div class="maphead"><span class="st auto" id="mapst">자동으로 짝지었어요</span><button class="reset" id="reset" hidden>자동 짝짓기로 되돌리기</button></div>
+        <div class="tbl"><table>
+          <thead><tr><th>자리</th><th>평균 위치 (앞뒤, 좌우)</th><th>포지션</th></tr></thead>
+          <tbody id="maptb"></tbody>
+        </table></div>
+        <span class="cap">평균 위치는 팀 중심 기준이에요. 앞뒤 +는 공격 쪽, 좌우 −는 왼쪽.</span>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s3">
+    <div class="sh"><span class="num">3 · 포지션별 피드백</span><h2 id="s3"><span class="tname">맨유</span>의 포지션별 피드백</h2>
+      <p>코칭 보드에서 바꿔야 할 선수가 지금 위치에서 가야 할 위치로 움직여요. 노란 화살표 옆 숫자가 움직일 거리예요. 아래 카드를 누르면 그 선수의 움직임만 보여줘요. 공을 누가 가졌는지는 데이터에 없어서, 팀이 상대 진영에 있던 장면을 공격할 때, 우리 진영에 있던 장면을 수비할 때로 나눴어요.</p>
+    </div>
+    <div class="coach" id="coachbox">
+      <div class="fig">
+        <div class="phase">
+          <span class="cap">코칭 보드</span>
+          <div class="seg" role="group" aria-label="코칭 상황">
+            <button data-cph="def" aria-pressed="true">수비할 때</button>
+            <button data-cph="att" aria-pressed="false">공격할 때</button>
+          </div>
+          <button class="reset" id="cplay" aria-label="움직임 멈추기">일시정지</button>
+          <button class="reset" id="cclear" hidden>전체 보기</button>
+        </div>
+        <div class="board"><canvas id="coach" width="1110" height="780" aria-label="바꿔야 할 선수가 목표 위치로 움직이는 코칭 보드"></canvas></div>
+        <span class="cap" id="ccap">–</span>
+      </div>
+      <div class="fig">
+        <h3 class="mvh">이렇게 움직여 보세요</h3>
+        <ol class="moves" id="moves"></ol>
+        <div class="kpis" id="cafter"></div>
+      </div>
+    </div>
+    <div class="lines" id="lines"></div>
+  </section>
+
+  <section aria-labelledby="s4">
+    <div class="sh"><span class="num">팀 전체</span><h2 id="s4"><span class="tname">맨유</span> 한눈에</h2></div>
+    <div class="team">
+      <div class="tbl"><table id="tteam"></table></div>
+      <div class="sum" id="tsum"></div>
+    </div>
+  </section>
+
+  <footer>데이터: SoccerNet 2016-09-24 Manchester United 4–1 Leicester City 전반. 좌표만 사용했어요.</footer>
+</div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+(() => {
+  const DATA = JSON.parse(document.getElementById('data').textContent).teams;
+  const TEAM = ['맨유', '레스터'], REAL = ['4-2-3-1', '4-4-2'];
+  // position catalogue: code -> [Korean name, type]
+  const POS = {LB:['왼쪽 풀백','FB'], RB:['오른쪽 풀백','FB'], LWB:['왼쪽 윙백','FB'], RWB:['오른쪽 윙백','FB'],
+    LCB:['왼쪽 센터백','CB'], RCB:['오른쪽 센터백','CB'], CB:['센터백','CB'],
+    LDM:['왼쪽 수비형 미드','DM'], RDM:['오른쪽 수비형 미드','DM'], DM:['수비형 미드','DM'],
+    LCM:['왼쪽 중앙 미드','CM'], RCM:['오른쪽 중앙 미드','CM'], CM:['중앙 미드','CM'],
+    LM:['왼쪽 미드','WM'], RM:['오른쪽 미드','WM'], CAM:['공격형 미드','AM'],
+    LAM:['왼쪽 윙','W'], RAM:['오른쪽 윙','W'], LW:['왼쪽 윙','W'], RW:['오른쪽 윙','W'],
+    ST:['스트라이커','ST'], LST:['왼쪽 스트라이커','ST'], RST:['오른쪽 스트라이커','ST']};
+  const LINE = {FB:0, CB:0, DM:1, CM:1, WM:1, AM:2, W:2, ST:2};
+  const B4 = [['LB',-15,-24],['LCB',-18,-8],['RCB',-18,8],['RB',-15,24]];
+  const FORMS = {
+    '4-2-3-1': B4.concat([['LDM',-6,-7],['RDM',-6,7],['LAM',6,-20],['CAM',8,0],['RAM',6,20],['ST',18,0]]),
+    '4-4-2':   B4.concat([['LM',-2,-22],['LCM',-4,-7],['RCM',-4,7],['RM',-2,22],['LST',14,-6],['RST',14,6]]),
+    '4-3-3':   B4.concat([['LCM',-2,-12],['DM',-7,0],['RCM',-2,12],['LW',14,-20],['ST',17,0],['RW',14,20]]),
+    '4-1-4-1': B4.concat([['DM',-8,0],['LM',2,-22],['LCM',0,-8],['RCM',0,8],['RM',2,22],['ST',16,0]]),
+    '3-5-2':   [['LCB',-18,-14],['CB',-20,0],['RCB',-18,14],['LWB',-4,-26],['LCM',-4,-9],['DM',-9,0],['RCM',-4,9],['RWB',-4,26],['LST',14,-6],['RST',14,6]],
+    '3-4-3':   [['LCB',-18,-14],['CB',-20,0],['RCB',-18,14],['LM',-4,-24],['LCM',-5,-7],['RCM',-5,7],['RM',-4,24],['LW',13,-18],['ST',17,0],['RW',13,18]],
+    '5-3-2':   [['LWB',-12,-28],['LCB',-18,-12],['CB',-20,0],['RCB',-18,12],['RWB',-12,28],['LCM',-4,-12],['CM',-6,0],['RCM',-4,12],['LST',14,-6],['RST',14,6]]
+  };
+  const st = {team: 0, form: '4-2-3-1', ph: 'all', asg: null, auto: null, sel: -1};
+  const $ = id => document.getElementById(id);
+  const fmt = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toFixed(d);
+  const css = () => { const c = getComputedStyle(document.documentElement); const g = n => c.getPropertyValue(n).trim(); return {utd: g('--utd'), lei: g('--lei'), dev: g('--dev'), pitch: g('--pitch'), num: g('--f-num'), body: g('--f-body'), gD: g('--gD'), gM: g('--gM'), gF: g('--gF')}; };
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+
+  // ---------- Hungarian (square, min cost); returns col for each row ----------
+  function hungarian(a) {
+    const n = a.length, INF = 1e18, u = Array(n + 1).fill(0), v = Array(n + 1).fill(0), p = Array(n + 1).fill(0), way = Array(n + 1).fill(0);
+    for (let i = 1; i <= n; i++) {
+      p[0] = i; let j0 = 0; const minv = Array(n + 1).fill(INF), used = Array(n + 1).fill(false);
+      do {
+        used[j0] = true; const i0 = p[j0]; let delta = INF, j1 = 0;
+        for (let j = 1; j <= n; j++) if (!used[j]) {
+          const cur = a[i0 - 1][j - 1] - u[i0] - v[j];
+          if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+          if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+        }
+        for (let j = 0; j <= n; j++) { if (used[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta; }
+        j0 = j1;
+      } while (p[j0] !== 0);
+      do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+    }
+    const ans = Array(n); for (let j = 1; j <= n; j++) ans[p[j] - 1] = j - 1; return ans;
+  }
+  const stats = A => { const mx = A.reduce((s, q) => s + q[0], 0) / A.length, my = A.reduce((s, q) => s + q[1], 0) / A.length;
+    const sx = Math.sqrt(A.reduce((s, q) => s + (q[0] - mx) ** 2, 0) / A.length), sy = Math.sqrt(A.reduce((s, q) => s + (q[1] - my) ** 2, 0) / A.length); return {mx, my, sx, sy}; };
+  const z = (A, s) => A.map(q => [(q[0] - s.mx) / s.sx, (q[1] - s.my) / s.sy]);
+  function autoMap(M, form) {
+    const T = FORMS[form].map(r => [r[1], r[2]]), sm = stats(M), stt = stats(T), a = z(M, sm), b = z(T, stt);
+    const cost = a.map(p => b.map(q => Math.hypot(p[0] - q[0], p[1] - q[1])));
+    const col = hungarian(cost);
+    const fit = col.reduce((s, c, i) => s + cost[i][c], 0) / 10;
+    const tpl = b.map(q => [q[0] * sm.sx + sm.mx, q[1] * sm.sy + sm.my]);   // template drawn in our shape's scale
+    return {col, fit, tpl};
+  }
+
+  // ---------- helpers on a phase shape ----------
+  const code = j => FORMS[st.form][st.asg[j]][0];
+  const type = j => POS[code(j)][1];
+  const nameOf = j => POS[code(j)][0] + ' (' + code(j) + ')';
+  function lineX(C, types) { const js = [...Array(10).keys()].filter(j => types.includes(type(j))); return js.length ? js.reduce((s, j) => s + C[j][0], 0) / js.length : null; }
+  function shapeInfo(C) {
+    const cy = C.reduce((s, q) => s + q[1], 0) / 10;
+    const cb = lineX(C, ['CB']), mid = lineX(C, ['DM', 'CM']) ?? lineX(C, ['WM']);
+    const fr = [...Array(10).keys()].filter(j => ['ST'].includes(type(j)));
+    const front = fr.length ? Math.max(...fr.map(j => C[j][0])) : Math.max(...C.map(q => q[0]));
+    return {cy, cb, mid, front};
+  }
+  const near = (C, j, pool) => Math.min(...pool.filter(k => k !== j).map(k => Math.hypot(C[k][0] - C[j][0], C[k][1] - C[j][1])));
+
+  function feedbackFor(j) {
+    const D = DATA[st.team], A = D.phase.att.M, F = D.phase.def.M, sa = shapeInfo(A), sd = shapeInfo(F), tp = type(j);
+    const all = [...Array(10).keys()], R = [];
+    const row = (when, cls, txt, todo, mv) => R.push({when, cls, txt, todo, mv: mv ? Object.assign({ph: when === '공격 때' ? 'att' : 'def'}, mv) : null});
+    const toward = (C, from, to, keep) => { const vx = C[to][0] - C[from][0], vy = C[to][1] - C[from][1], d = Math.hypot(vx, vy), f = Math.max(0, (d - keep) / d); return {who: from, dx: vx * f, dy: vy * f}; };
+    if (tp === 'FB') {
+      const adv = A[j][0] - sa.mid;
+      if (adv > 0) row('공격 때', 'good', `미드 줄보다 <span class="n">${fmt(adv)}m</span> 앞까지 올라가 공격에 가담해요.`, '이 높이를 유지하되, 같은 쪽 윙과 동시에 안쪽으로 몰리지 않게 해요.');
+      else if (adv < -6) row('공격 때', 'fix', `미드 줄보다 <span class="n">${fmt(-adv)}m</span> 뒤에 머물러요.`, '공이 같은 쪽에 있을 때 한 번씩 올라가 측면 숫자를 늘려 보세요.', {who: j, dx: -adv - 2, dy: 0});
+      else row('공격 때', 'info', `미드 줄과 비슷한 높이(<span class="n">${fmt(adv)}m</span>)에서 받쳐 줘요.`, '안정적이에요. 측면 공격이 막히면 더 올라가는 선택지도 있어요.');
+      const drop = F[j][0] - sd.cb;
+      if (drop > 5) row('수비 때', 'fix', `센터백보다 <span class="n">${fmt(drop)}m</span> 앞에 있어요. 뒷공간이 비어요.`, '수비 상황에서는 센터백 높이까지 내려와 네 명이 한 줄로 서 보세요.', {who: j, dx: -(drop - 1), dy: 0});
+      else row('수비 때', 'good', `센터백과 <span class="n">${fmt(Math.abs(drop))}m</span> 차이로 한 줄에 가깝게 서요.`, '수비 라인을 잘 맞추고 있어요.');
+    } else if (tp === 'CB') {
+      const mates = all.filter(k => type(k) === 'CB' && k !== j);
+      if (mates.length) {
+        const pk = mates.reduce((b, k) => Math.abs(F[k][1] - F[j][1]) < Math.abs(F[b][1] - F[j][1]) ? k : b, mates[0]);
+        const w = Math.abs(F[pk][1] - F[j][1]);
+        if (w > 16) row('수비 때', 'fix', `옆 센터백과 <span class="n">${fmt(w)}m</span> 떨어져 있어요.`, '두 센터백 사이를 좁혀서 가운데로 들어오는 패스를 막아 보세요.', {who: j, dx: 0, dy: Math.sign(F[pk][1] - F[j][1]) * (w - 14) / 2});
+        else row('수비 때', 'good', `옆 센터백과 <span class="n">${fmt(w)}m</span> 간격으로 중앙을 지켜요.`, '좋은 간격이에요.');
+      }
+      const g = sa.mid - sa.cb;
+      if (g > 9) row('공격 때', 'fix', `중앙 미드와 <span class="n">${fmt(g)}m</span> 떨어져 있어요.`, '공격할 때 한두 걸음 올라가 미드와 간격을 줄여 보세요. 짧은 패스로 빌드업하기 쉬워져요.', {who: j, dx: g - 7, dy: 0});
+      else row('공격 때', 'good', `중앙 미드와 <span class="n">${fmt(g)}m</span> 간격으로 빌드업을 받쳐 줘요.`, '미드와 가까워서 짧은 패스로 풀어 나가기 좋아요.');
+    } else if (tp === 'DM' || tp === 'CM') {
+      const gap = sd.mid - sd.cb;
+      if (gap > 8) row('수비 때', 'fix', `센터백과 미드 줄 사이가 <span class="n">${fmt(gap)}m</span>예요.`, '센터백 앞 공간을 상대가 쓰기 쉬워요. 한 걸음 내려와 그 공간을 막아 보세요.', {who: j, dx: -(gap - 6), dy: 0});
+      else row('수비 때', 'good', `센터백 앞 <span class="n">${fmt(gap)}m</span> 거리에서 막아 줘요.`, '수비 바로 앞을 잘 지키고 있어요.');
+      const fronts = all.filter(k => ['AM', 'W', 'ST'].includes(type(k)));
+      const kf = fronts.reduce((b, k) => Math.hypot(A[k][0] - A[j][0], A[k][1] - A[j][1]) < Math.hypot(A[b][0] - A[j][0], A[b][1] - A[j][1]) ? k : b, fronts[0]);
+      const d = Math.hypot(A[kf][0] - A[j][0], A[kf][1] - A[j][1]);
+      if (d > 15) row('공격 때', 'fix', `가장 가까운 공격 자리와 <span class="n">${fmt(d)}m</span> 떨어져 있어요.`, '공격이 시작되면 한 걸음 올라가 짧은 패스를 받을 수 있는 거리를 만들어 보세요.', toward(A, j, kf, 12));
+      else row('공격 때', 'good', `가장 가까운 공격 자리와 <span class="n">${fmt(d)}m</span> 거리에서 연결해요.`, '공격과 잘 이어져 있어요.');
+    } else if (tp === 'WM' || tp === 'W') {
+      const wide = Math.abs(A[j][1] - sa.cy);
+      if (wide < 12) row('공격 때', 'fix', `팀 중심에서 옆으로 <span class="n">${fmt(wide)}m</span>밖에 안 벌려요.`, '터치라인 쪽으로 더 벌려 서서 상대 수비를 옆으로 끌어내 보세요.', {who: j, dx: 0, dy: (Math.sign(A[j][1] - sa.cy) || -1) * (15 - wide)});
+      else row('공격 때', 'good', `팀 중심에서 옆으로 <span class="n">${fmt(wide)}m</span> 벌려 폭을 만들어요.`, '측면을 넓게 쓰고 있어요.');
+      const back = F[j][0] - sd.mid;
+      if (back > 6) row('수비 때', 'fix', `미드 줄보다 <span class="n">${fmt(back)}m</span> 앞에 남아 있어요.`, '수비할 때는 미드 줄까지 내려와 같은 쪽 풀백을 도와 보세요.', {who: j, dx: -(back - 2), dy: 0});
+      else row('수비 때', 'good', `미드 줄 근처(<span class="n">${fmt(back)}m</span>)까지 내려와 수비해요.`, '측면 수비 가담이 좋아요.');
+    } else if (tp === 'AM') {
+      const sts = all.filter(k => type(k) === 'ST');
+      const ks = sts.length ? sts.reduce((b, k) => Math.hypot(A[k][0] - A[j][0], A[k][1] - A[j][1]) < Math.hypot(A[b][0] - A[j][0], A[b][1] - A[j][1]) ? k : b, sts[0]) : -1;
+      const d = ks >= 0 ? Math.hypot(A[ks][0] - A[j][0], A[ks][1] - A[j][1]) : near(A, j, all);
+      if (d > 12) row('공격 때', 'fix', `스트라이커와 <span class="n">${fmt(d)}m</span> 떨어져 있어요.`, '스트라이커 쪽으로 더 붙어서 공을 주고받는 연결고리가 되어 보세요.', ks >= 0 ? toward(A, j, ks, 10) : null);
+      else row('공격 때', 'good', `스트라이커와 <span class="n">${fmt(d)}m</span> 거리에서 연결해요.`, '공격 연결이 잘 되고 있어요.');
+      const h = F[j][0] - sd.mid;
+      row('수비 때', h > 8 ? 'info' : 'good', `미드 줄보다 <span class="n">${fmt(h)}m</span> 앞에 있어요.`, h > 8 ? '앞에서 압박을 시작하는 역할이라면 괜찮아요. 아니라면 한 걸음 내려와 미드를 도와 보세요.' : '수비할 때 미드와 함께 움직여요.');
+    } else if (tp === 'ST') {
+      const iso = near(A, j, all);
+      const helpers = all.filter(k => k !== j && ['AM', 'W', 'CM', 'WM', 'ST'].includes(type(k)));
+      const kh = helpers.reduce((b, k) => Math.hypot(A[k][0] - A[j][0], A[k][1] - A[j][1]) < Math.hypot(A[b][0] - A[j][0], A[b][1] - A[j][1]) ? k : b, helpers[0]);
+      if (iso > 11) row('공격 때', 'fix', `가장 가까운 동료와 <span class="n">${fmt(iso)}m</span> 떨어져 혼자 있어요.`, `공을 받았을 때 도와줄 선수가 멀어요. 가장 가까운 ${POS[code(kh)][0]}(${code(kh)})가 10m 안으로 붙도록 약속해 보세요.`, toward(A, kh, j, 9));
+      else row('공격 때', 'good', `가장 가까운 동료와 <span class="n">${fmt(iso)}m</span> 거리에서 함께 공격해요.`, '고립되지 않고 지원을 받고 있어요.');
+      const h = F[j][0] - sd.mid;
+      if (h > 14) row('수비 때', 'info', `미드 줄보다 <span class="n">${fmt(h)}m</span> 앞에 남아 있어요.`, '역습을 노리고 남겨 둔 거라면 괜찮아요. 아니라면 내려와 상대 수비형 미드를 막아 보세요.');
+      else row('수비 때', 'good', `미드 줄과 <span class="n">${fmt(h)}m</span> 거리에서 앞쪽 압박에 함께해요.`, '앞에서부터 같이 수비하고 있어요.');
+    }
+    return R;
+  }
+
+  // ---------- drawing ----------
+  function draw() {
+    const cv = $('cv'), ctx = cv.getContext('2d'), T = css(), D = DATA[st.team];
+    const XR = 30, YR = 24, S = Math.min(cv.width / (2 * XR), cv.height / (2 * YR));
+    const P = (x, y) => [cv.width / 2 + x * S, cv.height / 2 + y * S];
+    ctx.fillStyle = T.pitch; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 1; ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.font = `600 ${Math.round(cv.width / 62)}px ${T.num}`; ctx.textAlign = 'center';
+    for (let x = -30; x <= 30; x += 10) { const [a] = P(x, 0); ctx.beginPath(); ctx.moveTo(a, 0); ctx.lineTo(a, cv.height); ctx.stroke(); if (x) ctx.fillText((x > 0 ? '+' : '') + x, a, cv.height - 8); }
+    for (let y = -20; y <= 20; y += 10) { const [, b] = P(0, y); ctx.beginPath(); ctx.moveTo(0, b); ctx.lineTo(cv.width, b); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = `600 ${Math.round(cv.width / 46)}px ${T.num}`;
+    ctx.textAlign = 'right'; ctx.fillText('공격 →', cv.width - 12, 26); ctx.textAlign = 'left'; ctx.fillText('← 뒤', 12, 26);
+    const gcol = [T.gD, T.gM, T.gF];
+    const lineOf = j => LINE[type(j)];
+    D.rel.forEach((q, i) => { const [x, y] = P(q[0], q[1]); ctx.fillStyle = rgba(gcol[lineOf(D.role[i])], .26); ctx.fillRect(x - 1.5, y - 1.5, 3, 3); });
+    const C = st.ph === 'all' ? D.M : D.phase[st.ph].M;
+    // template diamonds + link
+    const tpl = st.tpl;
+    for (let j = 0; j < 10; j++) {
+      const [tx, ty] = P(...tpl[st.asg[j]]), [cx, cy] = P(...D.M[j]);
+      ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(tx, ty - 9); ctx.lineTo(tx + 9, ty); ctx.lineTo(tx, ty + 9); ctx.lineTo(tx - 9, ty); ctx.closePath();
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    // phase move arrows (from overall to phase)
+    if (st.ph !== 'all') for (let j = 0; j < 10; j++) {
+      const [ax, ay] = P(...D.M[j]), [bx, by] = P(...C[j]); if (Math.hypot(bx - ax, by - ay) < 5) continue;
+      ctx.strokeStyle = rgba(T.dev, .9); ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+    }
+    ctx.font = `700 ${Math.round(cv.width / 50)}px ${T.num}`; ctx.textAlign = 'center';
+    for (let j = 0; j < 10; j++) {
+      const [x, y] = P(...C[j]), sel = st.sel === j;
+      ctx.beginPath(); ctx.arc(x, y, sel ? 15 : 11, 0, 7); ctx.fillStyle = gcol[lineOf(j)]; ctx.fill();
+      ctx.lineWidth = sel ? 4 : 2; ctx.strokeStyle = sel ? '#ffffff' : 'rgba(0,0,0,.55)'; ctx.stroke();
+      const lab = code(j), w = ctx.measureText(lab).width;
+      ctx.fillStyle = 'rgba(10,18,13,.75)'; ctx.fillRect(x - w / 2 - 6, y - 40, w + 12, 24);
+      ctx.fillStyle = '#ffffff'; ctx.fillText(lab, x, y - 21);
+    }
+  }
+
+  // ---------- coach board ----------
+  const coach = {ph: 'def', focus: -1, playing: !matchMedia('(prefers-reduced-motion: reduce)').matches, t0: performance.now()};
+  function dirText(dx, dy) {
+    const p = []; if (Math.abs(dx) >= 1) p.push(dx > 0 ? '앞으로' : '뒤로'); if (Math.abs(dy) >= 1) p.push(dy < 0 ? '왼쪽으로' : '오른쪽으로');
+    return p.join(' · ');
+  }
+  function movesFor(ph) {
+    const out = [];
+    for (let j = 0; j < 10; j++) feedbackFor(j).forEach(r => { if (r.cls === 'fix' && r.mv && r.mv.ph === ph) out.push(Object.assign({owner: j, why: (r.mv.who !== j ? code(j) + ' 지원 · ' : '') + r.txt.replace(/<[^>]+>/g, '')}, r.mv)); });
+    // merge duplicate movers (same player asked twice): add vectors
+    const by = new Map(); out.forEach(m => { const o = by.get(m.who); if (o) { o.dx += m.dx; o.dy += m.dy; o.why += ' / ' + m.why; } else by.set(m.who, Object.assign({}, m)); });
+    return [...by.values()].map(m => Object.assign(m, {dist: Math.hypot(m.dx, m.dy)})).filter(m => m.dist >= 1).sort((a, b) => b.dist - a.dist);
+  }
+  function shapeNums(C) { const xs = C.map(q => q[0]), ys = C.map(q => q[1]), cx = xs.reduce((a, b) => a + b) / 10, cy = ys.reduce((a, b) => a + b) / 10;
+    return {depth: Math.max(...xs) - Math.min(...xs), comp: C.reduce((a, q) => a + Math.hypot(q[0] - cx, q[1] - cy), 0) / 10}; }
+  function coachPanel() {
+    const D = DATA[st.team], C = D.phase[coach.ph].M, mv = movesFor(coach.ph);
+    $('moves').innerHTML = mv.length ? mv.map((m, i) => `<li><button data-who="${m.who}" aria-pressed="${coach.focus === m.who}"><span class="no">${i + 1}</span><span><b>${POS[code(m.who)][0]} (${code(m.who)})</b><span class="mv">${dirText(m.dx, m.dy)} ${fmt(m.dist)}m</span><small>${m.why}</small></span></button></li>`).join('')
+      : '<li class="none">이 상황에서는 크게 바꿀 움직임이 없어요.</li>';
+    $('moves').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const w = +b.dataset.who; coach.focus = coach.focus === w ? -1 : w; coachPanel(); }));
+    const after = C.map(q => q.slice()); mv.forEach(m => { after[m.who][0] += m.dx; after[m.who][1] += m.dy; });
+    const a = shapeNums(C), b = shapeNums(after);
+    $('cafter').innerHTML = `<div class="kpi"><span class="k">앞뒤 깊이 (지금 → 바꾸면)</span><span class="v">${fmt(a.depth)}<small>m → </small>${fmt(b.depth)}<small>m</small></span></div>
+      <div class="kpi"><span class="k">밀집도: 팀 중심까지 평균 거리</span><span class="v">${fmt(a.comp)}<small>m → </small>${fmt(b.comp)}<small>m</small></span></div>`;
+    $('ccap').textContent = `${TEAM[st.team]} ${coach.ph === 'att' ? '공격할 때' : '수비할 때'} 평균 모양이에요. 흐린 원이 지금 위치, 색칠한 점이 바꾼 위치예요. 팀 이동을 뺀 상대 위치라 오른쪽(→)이 공격 방향, 위가 왼쪽이에요.`;
+    $('cclear').hidden = coach.focus < 0;
+    coach.list = mv;
+  }
+  const ease = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
+  function drawCoach(now) {
+    const cv = $('coach'); if (!cv || !coach.list) return;
+    const ctx = cv.getContext('2d'), T = css(), D = DATA[st.team], C = D.phase[coach.ph].M;
+    const ext = C.concat(coach.list.map(m => [C[m.who][0] + m.dx, C[m.who][1] + m.dy]));
+    const xs = ext.map(q => q[0]), ys = ext.map(q => q[1]);
+    const mx = (Math.max(...xs) + Math.min(...xs)) / 2, my = (Math.max(...ys) + Math.min(...ys)) / 2;
+    const XR = Math.max(16, (Math.max(...xs) - Math.min(...xs)) / 2 + 9), YR = Math.max(14, (Math.max(...ys) - Math.min(...ys)) / 2 + 8);
+    const S = Math.min(cv.width / (2 * XR), cv.height / (2 * YR));
+    const P = (x, y) => [cv.width / 2 + (x - mx) * S, cv.height / 2 + (y - my) * S];
+    ctx.fillStyle = T.pitch; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.strokeStyle = 'rgba(255,255,255,.10)'; ctx.lineWidth = 1;
+    for (let x = -60; x <= 60; x += 5) { const [a] = P(x, 0); if (a < 0 || a > cv.width) continue; ctx.beginPath(); ctx.moveTo(a, 0); ctx.lineTo(a, cv.height); ctx.stroke(); }
+    for (let y = -40; y <= 40; y += 5) { const [, b] = P(0, y); if (b < 0 || b > cv.height) continue; ctx.beginPath(); ctx.moveTo(0, b); ctx.lineTo(cv.width, b); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = `600 ${Math.round(cv.width / 46)}px ${T.num}`;
+    ctx.textAlign = 'right'; ctx.fillText('공격 →', cv.width - 12, 26); ctx.textAlign = 'left'; ctx.fillText('← 뒤   격자 5m', 12, 26);
+    const per = 3600, t = coach.playing ? ((now - coach.t0) % per) / per : 0.7;
+    const p = t < 0.12 ? 0 : t < 0.55 ? ease((t - 0.12) / 0.43) : t < 0.92 ? 1 : 1 - ease((t - 0.92) / 0.08);
+    const gcol = [T.gD, T.gM, T.gF], teamCol = st.team === 0 ? T.utd : T.lei;
+    const mvBy = new Map(coach.list.map((m, i) => [m.who, Object.assign({n: i + 1}, m)]));
+    const pos = j => { const m = mvBy.get(j); return m ? [C[j][0] + m.dx * p, C[j][1] + m.dy * p] : C[j]; };
+    // team outline at the animated positions
+    const pts = [...Array(10).keys()].map(pos);
+    const hull = (() => { const q = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]), cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]), lo = [], up = [];
+      for (const r of q) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], r) <= 0) lo.pop(); lo.push(r); }
+      for (let i = q.length - 1; i >= 0; i--) { const r = q[i]; while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], r) <= 0) up.pop(); up.push(r); }
+      return lo.slice(0, -1).concat(up.slice(0, -1)); })();
+    ctx.beginPath(); hull.forEach((q, i) => { const [x, y] = P(q[0], q[1]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath();
+    ctx.fillStyle = rgba(teamCol, .16); ctx.fill(); ctx.strokeStyle = rgba(teamCol, .6); ctx.lineWidth = 2; ctx.stroke();
+    // ghosts + arrows for movers
+    for (const [j, m] of mvBy) {
+      const dim = coach.focus >= 0 && coach.focus !== j;
+      const [ax, ay] = P(...C[j]), [bx, by] = P(C[j][0] + m.dx, C[j][1] + m.dy);
+      ctx.globalAlpha = dim ? .25 : 1;
+      ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ax, ay, 12, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      const L = Math.hypot(bx - ax, by - ay), ux = (bx - ax) / L, uy = (by - ay) / L, ex = bx - ux * 14, ey = by - uy * 14;
+      ctx.strokeStyle = T.dev; ctx.fillStyle = T.dev; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(ax + ux * 13, ay + uy * 13); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ex + ux * 6, ey + uy * 6); ctx.lineTo(ex - ux * 12 - uy * 8, ey - uy * 12 + ux * 8); ctx.lineTo(ex - ux * 12 + uy * 8, ey - uy * 12 - ux * 8); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    // players
+    ctx.textAlign = 'center';
+    for (let j = 0; j < 10; j++) {
+      const m = mvBy.get(j), dim = coach.focus >= 0 && coach.focus !== j && m;
+      const [x, y] = P(...pos(j));
+      ctx.globalAlpha = dim ? .35 : 1;
+      ctx.beginPath(); ctx.arc(x, y, m ? 14 : 11, 0, 7); ctx.fillStyle = gcol[LINE[type(j)]]; ctx.fill();
+      ctx.lineWidth = m ? 3 : 2; ctx.strokeStyle = m ? '#ffffff' : 'rgba(0,0,0,.5)'; ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = `700 ${Math.round(cv.width / 60)}px ${T.num}`; ctx.fillText(code(j), x, y + 31);
+      if (m) { ctx.fillStyle = '#1a1a1a'; ctx.font = `700 ${Math.round(cv.width / 70)}px ${T.num}`; ctx.fillText(String(m.n), x, y + 5); }
+      ctx.globalAlpha = 1;
+    }
+    // distance labels at targets, nudged so they never overlap each other
+    const placed = [], hit = (r) => placed.some(q => r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0);
+    ctx.font = `700 ${Math.round(cv.width / 48)}px ${T.body}`;
+    for (const [j, m] of mvBy) {
+      if (coach.focus >= 0 && coach.focus !== j) continue;
+      const [bx, by] = P(C[j][0] + m.dx, C[j][1] + m.dy);
+      const lab = `${code(j)} ${dirText(m.dx, m.dy)} ${fmt(m.dist)}m`, w = ctx.measureText(lab).width, h = 32;
+      const lx = Math.min(cv.width - w / 2 - 10, Math.max(w / 2 + 10, bx));
+      let r = null;
+      for (const dy of [-34, 52, -70, 88, -106, 124]) {
+        const ly = by + dy, c = {x0: lx - w / 2 - 8, x1: lx + w / 2 + 8, y0: ly - 23, y1: ly - 23 + h, ly};
+        if (c.y0 < 34 || c.y1 > cv.height - 4) continue;
+        if (!hit(c)) { r = c; break; }
+      }
+      if (!r) continue;
+      placed.push(r);
+      ctx.fillStyle = 'rgba(10,18,13,.85)'; ctx.fillRect(r.x0, r.y0, r.x1 - r.x0, h);
+      ctx.fillStyle = T.dev; ctx.fillText(lab, lx, r.ly);
+    }
+  }
+  function coachLoop(now) { drawCoach(now); requestAnimationFrame(coachLoop); }
+
+  // ---------- panels ----------
+  const LCOL = ['var(--gD)', 'var(--gM)', 'var(--gF)'], LNAME = ['수비', '미드', '공격'];
+  function order() { const D = DATA[st.team]; return [...Array(10).keys()].sort((a, b) => LINE[type(a)] - LINE[type(b)] || D.M[a][1] - D.M[b][1]); }
+  function mapTable() {
+    const D = DATA[st.team], opts = FORMS[st.form];
+    $('maptb').innerHTML = order().map(j => `<tr><td><span class="dot" style="background:${LCOL[LINE[type(j)]]}"></span> 자리 ${j + 1}</td>
+      <td class="loc">${fmt(D.M[j][0])}, ${fmt(D.M[j][1])}</td>
+      <td><select data-slot="${j}" aria-label="자리 ${j + 1} 포지션">${opts.map((r, q) => `<option value="${q}"${q === st.asg[j] ? ' selected' : ''}>${POS[r[0]][0]} (${r[0]})</option>`).join('')}</select></td></tr>`).join('');
+    const edited = st.asg.some((c, j) => c !== st.auto[j]);
+    $('mapst').textContent = edited ? '직접 고친 짝짓기예요' : '자동으로 짝지었어요';
+    $('mapst').className = 'st ' + (edited ? 'edited' : 'auto');
+    $('reset').hidden = !edited;
+    $('maptb').querySelectorAll('select').forEach(s => s.addEventListener('change', e => {
+      const i = +e.target.dataset.slot, q = +e.target.value, k = st.asg.indexOf(q);
+      st.asg[k] = st.asg[i]; st.asg[i] = q; renderAll();
+    }));
+  }
+  function cards() {
+    const D = DATA[st.team];
+    const groups = [[], [], []]; order().forEach(j => groups[LINE[type(j)]].push(j));
+    $('lines').innerHTML = groups.map((g, li) => `<div class="lineg"><h3><i style="background:${LCOL[li]}"></i>${LNAME[li]}</h3><div class="cards">${g.map(j => {
+      const na = D.phase.att.cnt[j], nd = D.phase.def.cnt[j], low = Math.min(na, nd) < 300;
+      const rows = feedbackFor(j).map(r => `<div class="fbrow ${r.cls}"><span class="tg">${r.when}<br>${r.cls === 'good' ? '좋아요' : r.cls === 'fix' ? '바꿔요' : '참고'}</span><p>${r.txt}<span class="do">${r.todo}</span></p></div>`).join('');
+      return `<button class="pc" data-slot="${j}" aria-pressed="${st.sel === j}"><span class="ph"><b>${POS[code(j)][0]}</b><em>${code(j)}</em></span><span class="obs${low ? ' low' : ''}">${low ? '관측 부족 · ' : ''}공격 때 ${na}회 · 수비 때 ${nd}회 관측</span>${rows}</button>`;
+    }).join('')}</div></div>`).join('');
+    $('lines').querySelectorAll('.pc').forEach(b => b.addEventListener('click', () => {
+      const j = +b.dataset.slot; st.sel = st.sel === j ? -1 : j; draw(); cards();
+      const fx = feedbackFor(j).find(r => r.cls === 'fix' && r.mv);
+      if (fx && st.sel === j) { coach.ph = fx.mv.ph; coach.focus = fx.mv.who; setCph(); coachPanel(); $('coachbox').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'}); }
+    }));
+  }
+  function team() {
+    const D = DATA[st.team], A = D.phase.att, F = D.phase.def;
+    const info = C => { const s = shapeInfo(C), xs = C.map(q => q[0]), ys = C.map(q => q[1]);
+      return {depth: Math.max(...xs) - Math.min(...xs), width: Math.max(...ys) - Math.min(...ys), g1: s.mid - s.cb, g2: s.front - s.mid}; };
+    const a = info(A.M), d = info(F.M), tot = A.frames + F.frames + D.phaseMid;
+    const r = (k, x, y) => `<tr><td>${k}</td><td>${fmt(x)}m</td><td>${fmt(y)}m</td></tr>`;
+    $('tteam').innerHTML = `<thead><tr><th>지표</th><th>공격할 때</th><th>수비할 때</th></tr></thead><tbody>
+      ${r('앞뒤 깊이', a.depth, d.depth)}${r('좌우 폭', a.width, d.width)}${r('센터백 ↔ 중앙 미드', a.g1, d.g1)}${r('중앙 미드 ↔ 스트라이커', a.g2, d.g2)}
+      <tr><td>장면 비율</td><td>${Math.round(A.frames / tot * 100)}%</td><td>${Math.round(F.frames / tot * 100)}%</td></tr></tbody>`;
+    const fixes = [], goods = [];
+    for (let j = 0; j < 10; j++) feedbackFor(j).forEach(x => (x.cls === 'fix' ? fixes : x.cls === 'good' ? goods : []).push(POS[code(j)][0] + ' · ' + x.when + ' ' + x.txt.replace(/<[^>]+>/g, '')));
+    $('tsum').innerHTML = `<p><b>바꿔 볼 점 ${fixes.length}개</b>${fixes.slice(0, 4).join('<br>') || '없어요'}</p><p><b>잘하고 있는 점 ${goods.length}개</b>${goods.slice(0, 3).join('<br>')}</p>`;
+  }
+  function hint() {
+    const real = REAL[st.team], ok = st.form === real;
+    $('hint').innerHTML = ok ? `이 경기 실제 선발 포메이션이에요. <b>${TEAM[st.team]} ${real}</b>` : `이 경기 ${TEAM[st.team]}의 실제 선발은 <b>${real}</b>예요. 다른 포메이션을 넣으면 포지션 이름과 피드백이 어떻게 바뀌는지 볼 수 있어요.`;
+  }
+  function remap() {
+    const m = autoMap(DATA[st.team].M, st.form);
+    st.auto = m.col.slice(); st.asg = m.col.slice(); st.tpl = m.tpl; st.sel = -1;
+  }
+  function renderAll() {
+    document.querySelectorAll('.tname').forEach(e => e.textContent = TEAM[st.team]);
+    hint(); draw(); mapTable(); cards(); team(); coachPanel();
+  }
+
+  // ---------- controls ----------
+  $('form').innerHTML = Object.keys(FORMS).map(f => `<option value="${f}">${f}</option>`).join('');
+  $('form').value = st.form;
+  document.querySelectorAll('[data-team]').forEach(b => b.addEventListener('click', () => {
+    st.team = +b.dataset.team; st.form = REAL[st.team]; $('form').value = st.form; coach.focus = -1;
+    document.querySelectorAll('[data-team]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    remap(); renderAll();
+  }));
+  $('form').addEventListener('change', e => { st.form = e.target.value; remap(); renderAll(); });
+  document.querySelectorAll('[data-ph]').forEach(b => b.addEventListener('click', () => {
+    st.ph = b.dataset.ph; document.querySelectorAll('[data-ph]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); draw();
+  }));
+  $('reset').addEventListener('click', () => { st.asg = st.auto.slice(); renderAll(); });
+  function setCph() { document.querySelectorAll('[data-cph]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.cph === coach.ph))); }
+  document.querySelectorAll('[data-cph]').forEach(b => b.addEventListener('click', () => { coach.ph = b.dataset.cph; coach.focus = -1; setCph(); coachPanel(); }));
+  $('cplay').addEventListener('click', () => { coach.playing = !coach.playing; coach.t0 = performance.now(); $('cplay').textContent = coach.playing ? '일시정지' : '재생'; $('cplay').setAttribute('aria-label', coach.playing ? '움직임 멈추기' : '움직임 재생'); });
+  $('cclear').addEventListener('click', () => { coach.focus = -1; coachPanel(); });
+  if (!coach.playing) { $('cplay').textContent = '재생'; }
+  requestAnimationFrame(coachLoop);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+  new MutationObserver(draw).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+  window.__check = () => [0, 1].map(t => { const m = autoMap(DATA[t].M, REAL[t]); return m.col.map(c => FORMS[REAL[t]][c][0]); });
+  remap(); renderAll();
+})();
+</script>

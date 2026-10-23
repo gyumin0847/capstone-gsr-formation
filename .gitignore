@@ -1,0 +1,24 @@
+# SoccerNet NDA: never commit data, frames, videos or derived outputs
+data/
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.zip
+*.tar*
+*.json
+!web/*.json
+*.txt
+formation_tool.html
+outputs/
+preds/
+__pycache__/
+.venv*/
+.env
+*.csv
+*.npy
+*.npz
+*.pkl
+*.pt
+*.pth
+*.onnx
