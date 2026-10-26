@@ -97,6 +97,7 @@ td .loc{font-family:var(--f-num); font-size:.95rem; color:var(--muted)}
 .pc .ph em{font-style:normal; font-family:var(--f-num); color:var(--muted); font-weight:600}
 .pc .obs{font-size:.74rem; color:var(--muted); margin-top:-6px}
 .pc .obs.low{color:var(--warn); font-weight:700}
+.pc .conf{font-size:.74rem; color:var(--warn); font-weight:700; margin-top:-6px}
 .fbrow{display:grid; grid-template-columns:52px minmax(0,1fr); gap:8px; font-size:.86rem; line-height:1.5}
 .fbrow .tg{font-size:.72rem; font-weight:700; padding-top:2px}
 .fbrow.good .tg{color:var(--good)} .fbrow.fix .tg{color:var(--warn)} .fbrow.info .tg{color:var(--info)}
@@ -283,6 +284,19 @@ footer{font-size:.78rem; color:var(--muted)}
     const fit = col.reduce((s, c, i) => s + cost[i][c], 0) / 10;
     const tpl = b.map(q => [q[0] * sm.sx + sm.mx, q[1] * sm.sy + sm.my]);   // template drawn in our shape's scale
     return {col, fit, tpl};
+  }
+
+  // name confidence: jitter every slot by ~1.5 m (the spread between equally good solutions on
+  // broadcast data) and count how often each slot keeps its position name
+  function nameConf(M, form, base, n = 200) {
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+    const hit = Array(10).fill(0);
+    for (let k = 0; k < n; k++) {
+      const J = M.map(q => [q[0] + 1.5 * gauss(), q[1] + 1.5 * gauss()]);
+      autoMap(J, form).col.forEach((c, i) => { if (c === base[i]) hit[i]++; });
+    }
+    return hit.map(h => h / n);
   }
 
   // ---------- helpers on a phase shape ----------
@@ -527,7 +541,8 @@ footer{font-size:.78rem; color:var(--muted)}
     $('lines').innerHTML = groups.map((g, li) => `<div class="lineg"><h3><i style="background:${LCOL[li]}"></i>${LNAME[li]}</h3><div class="cards">${g.map(j => {
       const na = D.phase.att.cnt[j], nd = D.phase.def.cnt[j], low = Math.min(na, nd) < 300;
       const rows = feedbackFor(j).map(r => `<div class="fbrow ${r.cls}"><span class="tg">${r.when}<br>${r.cls === 'good' ? '좋아요' : r.cls === 'fix' ? '바꿔요' : '참고'}</span><p>${r.txt}<span class="do">${r.todo}</span></p></div>`).join('');
-      return `<button class="pc" data-slot="${j}" aria-pressed="${st.sel === j}"><span class="ph"><b>${POS[code(j)][0]}</b><em>${code(j)}</em></span><span class="obs${low ? ' low' : ''}">${low ? '관측 부족 · ' : ''}공격 때 ${na}회 · 수비 때 ${nd}회 관측</span>${rows}</button>`;
+      const cf = st.asg[j] === st.auto[j] ? st.conf[j] : 1, unsure = cf < 0.85;
+      return `<button class="pc" data-slot="${j}" aria-pressed="${st.sel === j}"><span class="ph"><b>${POS[code(j)][0]}</b><em>${code(j)}</em></span><span class="obs${low ? ' low' : ''}">${low ? '관측 부족 · ' : ''}공격 때 ${na}회 · 수비 때 ${nd}회 관측</span>${unsure ? `<span class="conf">이름 확신 ${Math.round(cf * 100)}% · 이웃 포지션과 헷갈릴 수 있어요. 아래 표에서 직접 바꿀 수 있어요.</span>` : ''}${rows}</button>`;
     }).join('')}</div></div>`).join('');
     $('lines').querySelectorAll('.pc').forEach(b => b.addEventListener('click', () => {
       const j = +b.dataset.slot; st.sel = st.sel === j ? -1 : j; draw(); cards();
@@ -555,6 +570,7 @@ footer{font-size:.78rem; color:var(--muted)}
   function remap() {
     const m = autoMap(DATA[st.team].M, st.form);
     st.auto = m.col.slice(); st.asg = m.col.slice(); st.tpl = m.tpl; st.sel = -1;
+    st.conf = nameConf(DATA[st.team].M, st.form, m.col);
   }
   function renderAll() {
     document.querySelectorAll('.tname').forEach(e => e.textContent = TEAM[st.team]);
