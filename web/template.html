@@ -163,7 +163,7 @@ footer{font-size:.78rem; color:var(--muted)}
 
   <section aria-labelledby="s2">
     <div class="sh"><span class="num">2 · 자동 짝짓기</span><h2 id="s2">좌표가 뭉친 10곳에 포지션을 붙였어요</h2>
-      <p>점 색은 수비(파랑)·미드(노랑)·공격(빨강) 줄이에요. 빈 마름모는 입력한 포메이션의 표준 위치이고, 점선이 어느 자리와 짝지어졌는지 보여줘요. 오른쪽 표에서 포지션을 바꾸면 피드백도 바로 다시 계산돼요.</p>
+      <p>점 색은 수비(파랑)·미드(노랑)·공격(빨강) 줄이에요. '45분 전체'에서 보이는 원은 자리마다 좌표가 퍼진 범위(1σ)로, Bialkowski 논문 그림의 역할 분포와 같은 방식이에요. 빈 마름모는 입력한 포메이션의 표준 위치이고, 점선이 어느 자리와 짝지어졌는지 보여줘요. 오른쪽 표에서 포지션을 바꾸면 피드백도 바로 다시 계산돼요.</p>
     </div>
     <div class="map">
       <div class="fig">
@@ -409,6 +409,23 @@ footer{font-size:.78rem; color:var(--muted)}
     const lineOf = j => LINE[type(j)];
     D.rel.forEach((q, i) => { const [x, y] = P(q[0], q[1]); ctx.fillStyle = rgba(gcol[lineOf(D.role[i])], .26); ctx.fillRect(x - 1.5, y - 1.5, 3, 3); });
     const C = st.ph === 'all' ? D.M : D.phase[st.ph].M;
+    // role distributions (Bialkowski 2014): 1-sigma ellipse of every slot's relative positions
+    if (st.ph === 'all') {
+      if (!D._cov) D._cov = [...Array(10).keys()].map(k => {
+        let n = 0, mx = 0, my = 0; D.rel.forEach((q, i) => { if (D.role[i] === k) { n++; mx += q[0]; my += q[1]; } });
+        mx /= n; my /= n; let a = 0, b = 0, c = 0;
+        D.rel.forEach((q, i) => { if (D.role[i] === k) { const dx = q[0] - mx, dy = q[1] - my; a += dx * dx; b += dx * dy; c += dy * dy; } });
+        a /= n; b /= n; c /= n;
+        const h = (a + c) / 2, r = Math.sqrt(((a - c) / 2) ** 2 + b * b);
+        return {mx, my, r1: Math.sqrt(h + r), r2: Math.sqrt(Math.max(h - r, 0)), ang: 0.5 * Math.atan2(2 * b, a - c)};
+      });
+      D._cov.forEach((e, j) => {
+        const [x, y] = P(e.mx, e.my);
+        ctx.beginPath(); ctx.ellipse(x, y, e.r1 * S, e.r2 * S, e.ang, 0, 2 * Math.PI);
+        ctx.fillStyle = rgba(gcol[lineOf(j)], .14); ctx.fill();
+        ctx.strokeStyle = rgba(gcol[lineOf(j)], .9); ctx.lineWidth = 2; ctx.stroke();
+      });
+    }
     // template diamonds + link
     const tpl = st.tpl;
     for (let j = 0; j < 10; j++) {
