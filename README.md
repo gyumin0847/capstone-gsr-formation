@@ -50,11 +50,12 @@ python pipeline/manutd_v2.py 1200 600
 python analysis/build.py manutd_viewer.json stats.json
 python analysis/phase.py manutd_viewer.json stats.json
 # 4-1) (권장) 역할 배정을 EM 최적 해로 다시 계산한 뒤 4)를 그 파일로 실행
-python analysis/reassign.py manutd_viewer.json manutd_viewer_em.json
+#      --alts: 비슷하게 좋은 다른 해도 저장 → 각각 build/phase 후 make_tool.py 뒤에 붙이면 피드백마다 '확실/경계' 표시
+python analysis/reassign.py manutd_viewer.json manutd_viewer_em.json 4 --alts
 # 4-2) (선택) 역할 분포 μ, Σ만 따로 계산 (논문 원형, 타원 시각화용)
 python analysis/role_distributions.py manutd_viewer.json roles.json
 # 5) 피드백 HTML
-python analysis/make_tool.py stats.json web/template.html formation_tool.html
+python analysis/make_tool.py stats.json web/template.html formation_tool.html [alt_stats1.json alt_stats2.json ...]
 ```
 - 포메이션은 `analysis/build.py`의 `FORM`에서 팀별로 입력 (예: 맨유 4-2-3-1, 레스터 4-4-2).
 - 다른 경기: 사진·보정 파일 경로와 `FORM`만 바꾸면 됨.
@@ -76,6 +77,7 @@ python analysis/make_tool.py stats.json web/template.html formation_tool.html
 - **짧은 구간:** 짧은 구간만으로 처음부터 계산하면 30분이어도 45분 결과와 2 m 정도 다르고, 포지션 이름 일치율도 30~87%로 들쭉날쭉하다. 앞선 결과를 시작값으로 쓰면 5분 구간에서 이름 100%, 위치 차이 1.6~2.5 m였다. → 권장: 하프 전체로 한 번 계산하고, 그 결과를 시작값으로 5분 단위 변화를 추적.
 - **크기 확인:** 모델이 그리는 팀 크기(맨유 앞뒤 표준편차 6.8 m, 좌우 10.2 m)는 한 팀 10명이 다 보인 장면(7.0 m, 10.3 m)과 거의 같다. 모델이 모양을 줄이는 것은 아니고, 중계 화면에 잡히는 장면 자체가 촘촘한 장면 위주라 팀이 작게 보인다 (센터백→스트라이커 10~18 m).
 - **포지션 이름 확신도:** 역할 위치를 1.5 m씩 흔들어 200번 다시 이름을 붙여, 같은 이름이 나오는 비율을 잰다 (`name_confidence`, 도구 카드에 85% 미만이면 표시). 파이프라인 1회 결과로는 낮은 확신 칸이 맨유 6개·레스터 7개였고, EM 최적 해(`reassign.py`)로 바꾸면 2개·0개로 줄었다. 피드백도 같이 바뀐다 (바꿔 볼 점 맨유 6→4개, 레스터 8→2개). 즉 **피드백은 역할 계산이 안정적이어야 믿을 수 있다.**
+- **피드백 안정성:** 비용이 최적과 0.5% 이내인 해(맨유 3개, 레스터 4개)마다 피드백을 다시 만들어 비교했다. '좋아요'는 대부분 그대로였지만(맨유 15/18, 레스터 17/18), '바꿔요'는 맨유 4개 모두 일부 해에서만 나왔고 레스터는 3개 중 1개(오른쪽 풀백 공격 때 미드 줄보다 6 m 뒤)만 모든 해에서 나왔다. 기준값 근처 항목이 많다는 뜻이라, 도구에 행마다 '확실 / 경계'를 표시하도록 했다.
 
 ## 화면 밖 선수 추정 실험 (`impute_eval.py`)
 10명 중 8명 이상 보인 장면에서 화면 폭을 15~25 m로 일부러 좁혀 선수를 가리고, 가려진 선수 위치를 예측했다 (역할은 앞 22.5분으로 학습하고 뒤 22.5분에서 시험, 반대로도 한 번 더).

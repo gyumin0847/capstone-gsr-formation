@@ -105,6 +105,8 @@ td .loc{font-family:var(--f-num); font-size:.95rem; color:var(--muted)}
 .fbrow .n{font-family:var(--f-num); font-weight:700; font-size:1rem}
 .fbrow .do{display:block; color:var(--muted)}
 .fbrow.fix .do{color:var(--ink)}
+.fbrow .rb{display:block; font-size:.72rem; color:var(--muted); margin-top:2px}
+.fbrow .rb.edge{color:var(--warn); font-weight:700}
 
 .team{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start}
 @media (max-width:760px){.team{grid-template-columns:minmax(0,1fr)}}
@@ -226,9 +228,11 @@ footer{font-size:.78rem; color:var(--muted)}
 </div>
 
 <script type="application/json" id="data">__DATA__</script>
+<script type="application/json" id="alt">__ALT__</script>
 <script>
 (() => {
   const DATA = JSON.parse(document.getElementById('data').textContent).teams;
+  let ALT = {}; try { ALT = JSON.parse(document.getElementById('alt').textContent); } catch (e) { ALT = {}; }
   const TEAM = ['맨유', '레스터'], REAL = ['4-2-3-1', '4-4-2'];
   // position catalogue: code -> [Korean name, type]
   const POS = {LB:['왼쪽 풀백','FB'], RB:['오른쪽 풀백','FB'], LWB:['왼쪽 윙백','FB'], RWB:['오른쪽 윙백','FB'],
@@ -297,6 +301,21 @@ footer{font-size:.78rem; color:var(--muted)}
       autoMap(J, form).col.forEach((c, i) => { if (c === base[i]) hit[i]++; });
     }
     return hit.map(h => h / n);
+  }
+
+  // feedback robustness: recompute a slot's feedback on other, equally good role solutions
+  const fbKey = r => r.when + '|' + r.cls + '|' + r.txt.replace(/<[^>]+>/g, '').replace(/[0-9.]+m/g, '#').split('#')[0].trim();
+  function feedbackWith(j, a) {
+    const keep = DATA[st.team];
+    DATA[st.team] = Object.assign({}, keep, {M: a.M, phase: Object.assign({}, keep.phase,
+      {att: Object.assign({}, keep.phase.att, {M: a.att}), def: Object.assign({}, keep.phase.def, {M: a.def})})});
+    try { return feedbackFor(j); } finally { DATA[st.team] = keep; }
+  }
+  function agreement(j, rows) {
+    const alts = ALT[st.team] || [];
+    if (!alts.length) return rows.map(() => null);
+    const other = alts.map(a => new Set(feedbackWith(j, a).map(fbKey)));
+    return rows.map(r => ({n: 1 + other.filter(s => s.has(fbKey(r))).length, of: alts.length + 1}));
   }
 
   // ---------- helpers on a phase shape ----------
@@ -540,7 +559,9 @@ footer{font-size:.78rem; color:var(--muted)}
     const groups = [[], [], []]; order().forEach(j => groups[LINE[type(j)]].push(j));
     $('lines').innerHTML = groups.map((g, li) => `<div class="lineg"><h3><i style="background:${LCOL[li]}"></i>${LNAME[li]}</h3><div class="cards">${g.map(j => {
       const na = D.phase.att.cnt[j], nd = D.phase.def.cnt[j], low = Math.min(na, nd) < 300;
-      const rows = feedbackFor(j).map(r => `<div class="fbrow ${r.cls}"><span class="tg">${r.when}<br>${r.cls === 'good' ? '좋아요' : r.cls === 'fix' ? '바꿔요' : '참고'}</span><p>${r.txt}<span class="do">${r.todo}</span></p></div>`).join('');
+      const fb = feedbackFor(j), ag = agreement(j, fb);
+      const rb = g => !g ? '' : g.n === g.of ? `<span class="rb">확실 · 계산 ${g.of}번 모두 같은 결과</span>` : `<span class="rb edge">경계 · 계산 ${g.of}번 중 ${g.n}번만 이 결과 (기준값 근처)</span>`;
+      const rows = fb.map((r, i) => `<div class="fbrow ${r.cls}"><span class="tg">${r.when}<br>${r.cls === 'good' ? '좋아요' : r.cls === 'fix' ? '바꿔요' : '참고'}</span><p>${r.txt}<span class="do">${r.todo}</span>${r.cls === 'info' ? '' : rb(ag[i])}</p></div>`).join('');
       const cf = st.asg[j] === st.auto[j] ? st.conf[j] : 1, unsure = cf < 0.85;
       return `<button class="pc" data-slot="${j}" aria-pressed="${st.sel === j}"><span class="ph"><b>${POS[code(j)][0]}</b><em>${code(j)}</em></span><span class="obs${low ? ' low' : ''}">${low ? '관측 부족 · ' : ''}공격 때 ${na}회 · 수비 때 ${nd}회 관측</span>${unsure ? `<span class="conf">이름 확신 ${Math.round(cf * 100)}% · 이웃 포지션과 헷갈릴 수 있어요. 아래 표에서 직접 바꿀 수 있어요.</span>` : ''}${rows}</button>`;
     }).join('')}</div></div>`).join('');
