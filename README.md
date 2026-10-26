@@ -33,6 +33,7 @@
 | | `phase.py` | 공격/수비 나누기(팀 중심 x > +5 m 공격, < −5 m 수비) → 상황별 위치·간격 |
 | | `check_lineup.py`, `rule_test.py` | 실제 라인업과 포지션 이름 비교, 이름 규칙 비교 |
 | | `make_tool.py` | `stats.json`을 템플릿에 넣어 피드백 HTML 생성 |
+| | `role_distributions.py` | **Bialkowski 2014 원형 구현.** 역할 10개를 가우시안 분포(μ, Σ)로 두고, 보이는 선수만으로 팀 이동(중앙값)을 뺀 뒤 −log 확률 비용 헝가리안으로 매칭 → 분포 재계산(EM)을 수렴까지 반복. 포메이션 템플릿으로 이름 붙이기(`name_roles`) 포함 |
 | `web/` | `template.html` | 포메이션 입력 → 자동 매핑 → 포지션 피드백 → 코칭 보드 |
 
 ## 실행 순서 (deep07 컨테이너, `(gsr)` 환경)
@@ -46,6 +47,8 @@ python pipeline/manutd_v2.py 1200 600
 # 4) 포지션 이름 + 공격/수비 통계
 python analysis/build.py manutd_viewer.json stats.json
 python analysis/phase.py manutd_viewer.json stats.json
+# 4-1) (선택) 역할 분포 μ, Σ 직접 계산 (논문 원형, 타원 시각화용)
+python analysis/role_distributions.py manutd_viewer.json roles.json
 # 5) 피드백 HTML
 python analysis/make_tool.py stats.json web/template.html formation_tool.html
 ```
@@ -62,6 +65,12 @@ python analysis/make_tool.py stats.json web/template.html formation_tool.html
 | 윙·측면 미드 | 공격 / 수비 | 중앙에서 12 m 미만(좁음) / 미드 라인보다 6 m 넘게 앞 |
 | 공격형 미드 | 공통 | 스트라이커와 12 m 초과 |
 | 스트라이커 | 공통 | 가장 가까운 동료와 11 m 초과(고립) |
+
+## 역할 분포 실험 결과 (맨유 vs 레스터 전반, `role_distributions.py`)
+- 논문처럼 "엉킨 초기 분포 → 반복 → 분리된 10개 분포"가 중계 데이터에서도 나온다 (반복 40회, 마지막 이동량 0.1 m 이하).
+- **결과가 시작값에 따라 달라질 수 있다.** 45분 데이터라도 시작값을 바꾸면 2~4 m 다른 해가 나온다. 여러 번 돌려 가장 잘 맞는 것을 고르고(`best_fit`), 좋은 해끼리는 포지션 이름이 10/10 같았다.
+- **짧은 구간:** 짧은 구간만으로 처음부터 계산하면 30분이어도 45분 결과와 2 m 정도 다르고, 포지션 이름 일치율도 30~87%로 들쭉날쭉하다. 앞선 결과를 시작값으로 쓰면 5분 구간에서 이름 100%, 위치 차이 1.6~2.5 m였다. → 권장: 하프 전체로 한 번 계산하고, 그 결과를 시작값으로 5분 단위 변화를 추적.
+- **한계:** 화면에 보이는 선수만 쓰므로 팀 길이·폭이 실제보다 작게 나온다 (예: 센터백→스트라이커 10~18 m).
 
 ## 아직 안 된 것
 - 화면 밖 선수 추정 (자리 평균 + 팀 이동으로 가능, 미구현)
