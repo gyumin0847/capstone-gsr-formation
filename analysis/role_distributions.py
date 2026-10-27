@@ -87,6 +87,16 @@ def impute(P, mu, gate=15.0, s_prev=None):
     return {k: mu[k] + s for k in miss}, s, (ri, ci)
 
 
+def impute_track(last_pos, last_shift, last_role, gone_s, s_now, mu, tau=5.0):
+    """off-screen player whose identity is kept by the tracker (e.g. CAMELTrack):
+    blend 'where he was, moved with the team' and 'his role's usual place', trusting the first
+    less the longer he has been off-screen (weight exp(-gone/tau))."""
+    seen = np.asarray(last_pos, float) + (np.asarray(s_now, float) - np.asarray(last_shift, float))
+    role = np.asarray(mu[last_role], float) + np.asarray(s_now, float)
+    w = float(np.exp(-gone_s / tau))
+    return w * seen + (1 - w) * role
+
+
 def e_step(frames, mu, cov, inner=3, cost='euclid', gate=15.0, smooth=False):
     if cost == 'euclid':
         icov = logdet = None

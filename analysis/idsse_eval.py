@@ -22,6 +22,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 import role_distributions as R
 
+TAUS = (2, 5, 10)
 MATCHES = ['J03WMX', 'J03WN1', 'J03WPY', 'J03WOH', 'J03WQQ', 'J03WOY', 'J03WR9']
 
 
@@ -56,6 +57,7 @@ def evaluate_team(P, cam, width, fps, poss_own=None, restarts=3):
     agree = tot = 0
     rows = []                                            # off-screen errors
     last_seen = np.full((N, 2), np.nan); last_t = np.full(N, -1); last_shift = np.full((N, 2), np.nan)
+    last_role = np.full(N, -1)
     proxy = []
     prev_s = None
     for t in range(T):
@@ -89,9 +91,16 @@ def evaluate_team(P, cam, width, fps, poss_own=None, restarts=3):
                     if last_t[p] >= 0:
                         rec['last_seen'] = float(np.hypot(*(last_seen[p] - P[t, p])))
                         rec['last_seen_plus_shift'] = float(np.hypot(*(last_seen[p] + (s - last_shift[p]) - P[t, p])))
+                        if last_role[p] >= 0:
+                            rec['role_of_player'] = float(np.hypot(*(mu_vis[last_role[p]] + s - P[t, p])))
+                            for tau in TAUS:
+                                est = R.impute_track(last_seen[p], last_shift[p], last_role[p], gone, s, mu_vis, tau)
+                                rec[f'blend_tau{tau:g}'] = float(np.hypot(*(est - P[t, p])))
                     rows.append(rec)
         for i in idx_vis:
             last_seen[i] = P[t, i]; last_t[i] = t; last_shift[i] = s
+        for i, k in zip(ri, ci):
+            last_role[idx_vis[i]] = k
         if poss_own is not None and np.isfinite(poss_own[t]):
             guess = 1 if s[0] > 5 else (0 if s[0] < -5 else -1)
             proxy.append((guess, int(poss_own[t])))
@@ -103,7 +112,8 @@ def evaluate_team(P, cam, width, fps, poss_own=None, restarts=3):
         if not xs:
             continue
         out['C_offscreen_median_m'][name] = {m: round(float(np.median([r[m] for r in xs if m in r])), 2)
-                                              for m in ('role_shift', 'team_centre', 'last_seen', 'last_seen_plus_shift')
+                                              for m in ('role_shift', 'role_of_player', 'team_centre', 'last_seen',
+                                                        'last_seen_plus_shift') + tuple(f'blend_tau{t:g}' for t in TAUS)
                                               if any(m in r for r in xs)} | {'n': len(xs)}
     if proxy:
         pr = np.array(proxy); dec = pr[:, 0] >= 0
@@ -154,7 +164,10 @@ def selftest():
     centre = np.c_[np.cumsum(rng.normal(0, 1.2, n)), np.cumsum(rng.normal(0, 0.6, n))]
     centre[:, 0] = 25 * np.sin(np.linspace(0, 12, n)) + 0.3 * centre[:, 0] / (1 + np.abs(centre[:, 0]).max() / 20)
     centre[:, 1] = 6 * np.sin(np.linspace(0, 7, n))
-    P = centre[:, None] + T[None] + rng.normal(0, 2.5, (n, 10, 2))
+    dev = np.zeros((n, 10, 2))
+    for i in range(1, n):
+        dev[i] = 0.93 * dev[i - 1] + rng.normal(0, 1.2, (10, 2))     # ~3 m drift that lasts several seconds
+    P = centre[:, None] + T[None] + dev
     ball = centre[:, 0] + rng.normal(0, 8, n)
     cam = camera_centre(ball, fps, 52.5, 35)
     own = (centre[:, 0] + rng.normal(0, 4, n) > 0).astype(float)
