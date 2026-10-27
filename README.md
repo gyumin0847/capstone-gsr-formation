@@ -34,6 +34,7 @@
 | | `check_lineup.py`, `rule_test.py` | 실제 라인업과 포지션 이름 비교, 이름 규칙 비교 |
 | | `make_tool.py` | `stats.json`을 템플릿에 넣어 피드백 HTML 생성 |
 | | `reassign.py` | EM 역할 분포(여러 번 시작해 가장 잘 맞는 해)로 프레임별 역할 배정 `a`와 팀 이동 `sh`를 다시 계산 → build/phase/make_tool을 그대로 다시 돌리면 됨 |
+| | `export_game_state.py` | **최종 JSON (GSR + 보간).** 프레임마다 팀별 10개 역할 전부를 `observed`(검출) 또는 추정으로 채움. GSR 출력(`--gsr --calib --teams`)을 넣으면 트랙 ID·박스·경기장 바닥점(왼쪽/가운데/오른쪽)까지 들어감 |
 | | `idsse_eval.py` | **IDSSE 풀피치 → 가상 중계 화면 변환 테스트.** 모든 선수가 있는 IDSSE(분데스리가 7경기) 위치 데이터에서 공을 따라가는 카메라 폭(기본 35 m) 밖 선수를 가리고, 보이는 선수만으로 만든 역할·화면 밖 추정·공격/수비 판단을 원본과 비교. `--selftest`로 데이터 없이 확인 가능 |
 | | `impute_eval.py` | 화면 밖 선수 추정 검증 (보이는 선수를 일부러 가리고 오차 측정) |
 | | `role_distributions.py` | **Bialkowski 2014 원형 구현.** 역할 10개를 가우시안 분포(μ, Σ)로 두고, 보이는 선수만으로 팀 이동(중앙값)을 뺀 뒤 −log 확률 비용 헝가리안으로 매칭 → 분포 재계산(EM)을 수렴까지 반복. 포메이션 템플릿으로 이름 붙이기(`name_roles`) 포함 |
@@ -92,6 +93,23 @@ python analysis/make_tool.py stats.json web/template.html formation_tool.html [a
 
 - 역할 기반 추정이 단순 중심보다 오차가 거의 절반이다. 논문(Off-Screen Imputation)이 보고한 전체 중앙값 9.7~11.6 m와 비슷한 수준이다. 단, 시간 정보 없이 한 장면만 쓴 실험이라 직접 비교는 어렵다.
 - 남은 오차의 대부분은 **팀 이동을 일부 선수로 추정하는 데서** 나온다 (8.3 m → 정답 이동이면 5.0 m).
+
+## 최종 JSON 형식 (`export_game_state.py`)
+```json
+{"meta": {"fps": 2, "teams": {"0": {"formation": "4-2-3-1",
+          "roles": [{"slot": 0, "position": "LDM", "name_confidence": 0.96, "mean_rel": [-0.45, -4.45]}, ...]}}},
+ "frames": [{"f": 683, "ball": null,
+   "teams": {"0": {"team_shift": [30.1, -12.0], "shift_from": "this_frame",
+     "players": [
+       {"slot": 0, "position": "LDM", "x": 35.5, "y": -18.6, "observed": true, "track_id": 17, "source": "detection",
+        "jersey": 21, "bbox_image": [..], "bbox_pitch": {"bottom_left": [..], "bottom_middle": [..], "bottom_right": [..]}},
+       {"slot": 4, "position": "RB", "x": 22.0, "y": 11.3, "observed": false, "track_id": null,
+        "source": "role_mean+team_shift", "off_screen_s": null, "expected_error_m": 8.3}]}}}]}
+```
+- 좌표: m, 경기장 중앙 (0,0). `observed=false` 행은 추정값이다. 히트맵·패스맵·LLM 입력에서 실제 위치가 필요하면 빼거나 따로 표시한다 (추정은 역할 평균 쪽으로 몰린다).
+- 한 팀이 화면에 0~2명만 보이면 직전 팀 위치를 최대 5초 유지한다 (`shift_from: "held"`). 그보다 길면 그 팀은 `null`.
+- 트래커가 ID를 유지하면(예: CAMELTrack) 화면 밖 선수는 "마지막 위치 + 팀 이동"과 "역할 평균"을 안 보인 시간에 따라 섞는다 (`impute_track`, 기본 τ = 5초 — IDSSE 결과로 다시 정할 값).
+- 맨유 전반: 3,922프레임, 선수 행의 53%가 실제 검출, 나머지가 추정.
 
 ## 아직 안 된 것
 - 화면 밖 선수 추정 (자리 평균 + 팀 이동으로 가능, 미구현)
