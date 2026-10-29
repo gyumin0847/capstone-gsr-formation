@@ -126,8 +126,8 @@ def evaluate_team(P, cam, width, fps, poss_own=None, restarts=3):
 # ---------------------------------------------------------------- IDSSE adapter (floodlight)
 def run_match(mid, width, restarts):
     from floodlight.io.datasets import IDSSEDataset
-    ds = IDSSEDataset(mid)
-    _, xy, poss, ballst, sheets, pitch = ds.get(mid, events=False)
+    ds = IDSSEDataset(match_id=mid)              # first positional arg is the folder name, not the match
+    _, xy, poss, ballst, sheets, pitch = ds.get(match_id=mid, events=False)
     xmid = np.mean(pitch.xlim); ymid = np.mean(pitch.ylim); half_len = (pitch.xlim[1] - pitch.xlim[0]) / 2
     res = {}
     for seg in xy:

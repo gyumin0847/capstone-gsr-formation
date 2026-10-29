@@ -111,6 +111,11 @@ python analysis/make_tool.py stats.json web/template.html formation_tool.html [a
 - 트래커가 ID를 유지하면(예: CAMELTrack) 화면 밖 선수는 "마지막 위치 + 팀 이동"과 "역할 평균"을 안 보인 시간에 따라 섞는다 (`impute_track`, 기본 τ = 5초 — IDSSE 결과로 다시 정할 값).
 - 맨유 전반: 3,922프레임, 선수 행의 53%가 실제 검출, 나머지가 추정.
 
+## B팀: 상황별 권장 위치 예측 (`bteam/`)
+
+공·상대 위치를 보고 우리 팀 10명이 서야 할 위치를 예측합니다. IDSSE로 학습하고, 비교 기준 4개와 교수님 구조(DETR 디코더식)를 비교합니다.
+실행법과 설계는 [`bteam/README.md`](bteam/README.md)에 있습니다.
+
 ## 아직 안 된 것
 - 화면 밖 선수 추정 (자리 평균 + 팀 이동으로 가능, 미구현)
 - 공 위치 기반 공격/수비 판단
