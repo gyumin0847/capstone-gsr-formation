@@ -12,7 +12,7 @@
 없는 선수(퇴장, 교체 직후 누락)는 NaN.
 
 포지션 = Bialkowski 2014 자리 배정 (analysis/role_distributions.py, 경기·하프·팀마다 따로 EM).
-자리 번호는 평균 위치를 뒤에서 앞으로(x), 같은 줄 안에서는 왼쪽에서 오른쪽(y)으로 정렬해 붙인다
+자리 번호는 평균 위치를 뒤에서 앞으로(x), 같은 줄 안에서는 -y 쪽에서 +y 쪽으로 정렬해 붙인다
 -> 다른 팀이어도 0~3번은 대체로 수비 라인, 마지막 번호들은 공격수.
 
 usage (deep07):
@@ -34,7 +34,7 @@ LINE_GAP = 6.0          # m: roles whose mean x differs by less than this are tr
 
 # ------------------------------------------------------------------ helpers (plain numpy, testable)
 def canonical_order(mu):
-    """role order: deepest line first, inside a line left (-y) to right (+y)"""
+    """role order: deepest line first, inside a line from -y to +y"""
     idx = list(np.argsort(mu[:, 0]))
     lines, cur = [], [idx[0]]
     for i in idx[1:]:

@@ -6,6 +6,7 @@ A scene is used when the ball is known and all 10 of our outfield players are on
 """
 import glob, os
 import numpy as np
+import situations as SIT
 
 SCALE = 52.5            # half pitch length: x and y divided by this (doc: "52.5로 나눠 -1~1로")
 
@@ -15,13 +16,14 @@ def load(data_dir, matches=None):
     files = sorted(glob.glob(os.path.join(data_dir, '*.npz')))
     if not files:
         raise SystemExit(f'no npz files in {data_dir} (run prepare_idsse.py or make_synthetic.py first)')
-    cols = {k: [] for k in ('ball', 'own', 'opp', 'own_mean', 'opp_mean', 'phase', 't', 'match', 'group')}
+    cols = {k: [] for k in ('ball', 'own', 'opp', 'own_mean', 'opp_mean', 'phase', 't', 'match', 'group', 'since_change')}
     for gi, f in enumerate(files):
         d = np.load(f)
         mid = str(d['match'])
         if matches is not None and mid not in matches:
             continue
         ok = np.isfinite(d['own'][..., 0]).all(1) & np.isfinite(d['ball'][:, 0])
+        sc = SIT.since_change(d['phase'], d['t'])          # before filtering: needs the full time line
         n = int(ok.sum())
         if n == 0:
             continue
@@ -30,9 +32,10 @@ def load(data_dir, matches=None):
         cols['opp_mean'].append(np.repeat(d['opp_mean'][None], n, 0))
         cols['phase'].append(d['phase'][ok]); cols['t'].append(d['t'][ok])
         cols['match'].append(np.array([mid] * n)); cols['group'].append(np.full(n, gi))
+        cols['since_change'].append(sc[ok])
     out = {k: np.concatenate(v) for k, v in cols.items()}
     out['opp_filled'] = fill_opp(out)
-    return out
+    return SIT.label(out)
 
 
 def fill_opp(D):
