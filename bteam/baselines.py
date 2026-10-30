@@ -61,7 +61,8 @@ class KNN:
         if len(X) > self.max_train:
             i = np.random.default_rng(self.seed).choice(len(X), self.max_train, replace=False); X, Y = X[i], Y[i]
         self.sc = StandardScaler().fit(X)
-        self.m = KNeighborsRegressor(self.k, weights='distance', n_jobs=4)   # shared lab server: 4 cores.fit(self._scaled(X), Y)
+        # n_jobs=4: shared lab server, do not take every core
+        self.m = KNeighborsRegressor(self.k, weights='distance', n_jobs=4).fit(self._scaled(X), Y)
         return self
 
     def predict(self, D):
