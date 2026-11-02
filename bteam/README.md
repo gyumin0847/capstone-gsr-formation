@@ -56,6 +56,18 @@ python bteam/make_synthetic.py --out /tmp/bteam_syn                 # 30초
 python bteam/run.py --data /tmp/bteam_syn --test SYN03 --val SYN02 --epochs 10
 ```
 
+## ghost 영상 (`ghost_video.py`)
+
+학습된 모델(`run.py`가 저장한 `<모델>_<시험 경기>.pt`)로 그 시험 경기의 한 구간을 영상으로 만듭니다.
+장면마다 따로 계산한 ghost를 화면에서만 부드럽게 이어 붙이고(이전 위치 쪽으로 절반만 이동 + 최고 10 m/s),
+상대 공일 때만 ghost를 그립니다. 자리 잡은 수비(뺏긴 지 4초 이후)에서 실제 선수가 그 자리 기준
+(검증 경기에서 잰 상위 20% 거리)보다 2초 이상 벗어나면 빨간색으로 표시합니다.
+
+```bash
+python bteam/ghost_video.py --data ~/data/bteam --model ~/results/bteam_v0/tfC_J03WR9.pt \
+    --seg firstHalf --team Home --start 600 --seconds 90 --out ~/results/ghost_J03WR9.mp4
+```
+
 ## 설계 (B팀 문서 '설계안 v0'과 같음)
 
 - 장면 = 2 fps 한 프레임, 한 팀 시점. 좌표는 m, 경기장 중앙 (0, 0). 모델 안에서는 52.5로 나눕니다.
