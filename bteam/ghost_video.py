@@ -24,6 +24,7 @@ import data as DT  # noqa: E402
 
 GAP_S = 0.75            # scenes further apart than this (s) are not joined (dead ball in between)
 ALERT_S = 2.0           # deviation must last this long before it is flagged
+JUMP_M = 5.0           # m in one 0.5 s scene step = 10 m/s: faster than that is a role swap, not running
 SETTLED = 1             # situations.label: sit_phase 1 = 수비 (상대 공, 뺏긴 지 4초 이후)
 
 
@@ -89,8 +90,26 @@ def frames(t, sub):
     return out
 
 
-def lerp(A, i, w):
-    return A[i] if w == 0 else (1 - w) * A[i] + w * A[i + 1]
+def lerp(A, i, w, jump=None):
+    """linear fill between scene i and i+1. jump (m): a player who 'moves' further than this in one scene step
+    is a role swap (two teammates exchanged role numbers), not a run -> snap instead of sliding across the pitch"""
+    if w == 0:
+        return A[i]
+    out = (1 - w) * A[i] + w * A[i + 1]
+    if jump is not None:
+        far = np.hypot(*(A[i + 1] - A[i]).T) > jump
+        out[far] = (A[i] if w < 0.5 else A[i + 1])[far]
+    return out
+
+
+def swap_stats(S, raw):
+    """how often role numbers jump between neighbouring scenes (actual) and how much the scene-wise ghost jitters"""
+    t = S['t']; j = np.where(np.diff(t) <= GAP_S)[0]
+    step = lambda A: np.hypot(*(A[j + 1] - A[j]).transpose(2, 0, 1))
+    own = step(S['own']); gh = step(raw)
+    return {'own_swap_pct': 100 * float((own > JUMP_M).any(1).mean()),
+            'own_step_m': float(np.median(own)), 'ghost_raw_step_m': float(np.median(gh)),
+            'ghost_raw_jump_pct': 100 * float((gh > JUMP_M).any(1).mean())}
 
 
 def render(S, ghost, flag, show, out, fps, title):
@@ -120,7 +139,7 @@ def render(S, ghost, flag, show, out, fps, title):
 
     def draw(j):
         i, w = plan[j]
-        P = lerp(S['own'], i, w); O = lerp(S['opp_filled'], i, w); B = lerp(S['ball'], i, w); G = lerp(ghost, i, w)
+        P = lerp(S['own'], i, w, JUMP_M); O = lerp(S['opp_filled'], i, w, JUMP_M); B = lerp(S['ball'], i, w); G = lerp(ghost, i, w)
         red = flag[i]
         own.set_offsets(P); opp.set_offsets(O); ball.set_offsets(B[None])
         own.set_color(np.where(red[:, None], [[0.75, 0.22, 0.17, 1]], [[0.12, 0.37, 0.66, 1]]))
@@ -197,6 +216,10 @@ def main():
     gap = np.hypot(*(S['own'] - raw).transpose(2, 0, 1))             # feedback uses the scene-wise ghost; smoothing is display only
     flag = alerts(gap, S['t'], settled, thr)
 
+    st = swap_stats(S, raw)
+    print(f"role swaps (a role number jumps > {JUMP_M:.0f} m between scenes): {st['own_swap_pct']:.0f}% of scene steps; "
+          f"scene-wise ghost jumps: {st['ghost_raw_jump_pct']:.0f}% (median step: players {st['own_step_m']:.1f} m, "
+          f"raw ghost {st['ghost_raw_step_m']:.1f} m)")
     out = render(S, ghost, flag, show, os.path.expanduser(a.out), a.fps, f'{mid} {a.seg} {a.team} (model {stem})')
     n_def = int(settled.sum())
     print(f'{len(S["t"])} scenes ({n_def} settled defence). written: {out}')
