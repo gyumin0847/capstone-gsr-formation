@@ -31,7 +31,7 @@ def load_model(path, variant, d, layers, device):
     import torch
     import model as M
     net = M.PositionDecoder(variant, d=d, layers=layers)
-    net.load_state_dict(torch.load(path, map_location=device))
+    net.load_state_dict(torch.load(path, map_location=device, weights_only=True))
     return net.to(device).eval()
 
 
@@ -140,6 +140,11 @@ def render(S, ghost, flag, show, out, fps, title):
         return [own, opp, ball, gh, head, *lines]
 
     anim = animation.FuncAnimation(fig, draw, frames=len(plan), blit=False)
+    try:                                       # no system ffmpeg in the lab container: pip install imageio-ffmpeg
+        import imageio_ffmpeg
+        matplotlib.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
+    except ImportError:
+        pass
     if out.endswith('.gif') or not animation.writers.is_available('ffmpeg'):
         out = os.path.splitext(out)[0] + '.gif'
         anim.save(out, writer=animation.PillowWriter(fps=fps))
